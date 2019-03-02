@@ -1,0 +1,7 @@
+# files without extension, apart from Makefile
+*
+!*.*
+!Makefile
+
+# macOS
+.DS_Store
