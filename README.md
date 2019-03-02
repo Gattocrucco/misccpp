@@ -4,11 +4,11 @@ Miscellaneous code in C++.
 
 ## Usage
 
-They are just header files so place them alongside your code. Use `make` to run the tests.
+They are just header files so place them alongside your code. The standard is C++11 so probably you need to specify `-std=c++11` or greater when compiling.
 
 ## Documentation
 
-None. See the tests for examples.
+None. See the tests for examples. Use `make` to compile and run all the tests.
 
 ## Headers
 
