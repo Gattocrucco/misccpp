@@ -19,7 +19,8 @@ can be checked if it contains a given point in linear time (linear in the
 number of vertices).
 
 `ConvexPolygon` checks that the polygon is convex at construction. If it is not
-it throws an exception.
+it throws an exception. The numerical type `Number` (saved in the member type
+`coord_type`) must be signed.
 
 The numerical type used to save the coordinates of the vertices and to make
 computations is a template parameter. Both checking if the polygon is convex and
@@ -88,24 +89,13 @@ private:
         return ax * by - ay * bx;
     }
     
-    static int sign(const Number &a) {
-        if (a > 0) {
-            return 1;
-        } else if (a < 0) {
-            return -1;
-        } else {
-            return 0;
-        }
-    }
-    
     static bool same_sign_weak(
         const Number &a, const Number &b, const Number &c
     ) {
         return (a >= 0 and b >= 0 and c >= 0) or (a <= 0 and b <= 0 and c <= 0);
     }
     
-    template<typename T>
-    static bool different_sign_weak_right(const T &a, const T &b) {
+    static bool different_sign_weak_right(const Number &a, const Number &b) {
         return (a > 0 and b <= 0) or (a < 0 and b >= 0);
     }
     
