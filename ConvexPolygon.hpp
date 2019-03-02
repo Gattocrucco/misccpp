@@ -7,6 +7,43 @@
 
 #include "tuple_iterator.hpp"
 
+/*! \file
+\brief Defines class template `ConvexPolygon`.
+*/
+
+/*!
+\brief Implements a convex polygon that can check if it contains a point.
+
+A polygon can be checked to be convex in linear time, and if it is convex it
+can be checked if it contains a given point in linear time (linear in the
+number of vertices).
+
+`ConvexPolygon` checks that the polygon is convex at construction. If it is not
+it throws an exception.
+
+The numerical type used to save the coordinates of the vertices and to make
+computations is a template parameter. Both checking if the polygon is convex and
+if it contains a point are exact computations if the numerical type is integer
+(also if the type is floating-point but one uses only integer coordinates low
+enough to avoid rounding). In the computations the numbers are multiplied so
+one must be careful about overflows, which are not checked. Consider that each
+coordinate is squared at some point.
+
+Example:
+~~~{.cpp}
+#include "ConvexPolygon.hpp"
+int main() {
+    ConvexPolygon<double> polygon({
+        // x, y
+        {0, 0},
+        {1, 0},
+        {0.5, 1}
+    }); // a triangle
+    polygon.contains_point(0, 0); // returns `true` (edges count as inside)
+    polygon.contains_point(2, 2); // returns `false`
+}
+~~~
+*/ 
 template<typename Number>
 class ConvexPolygon {
 private:
@@ -108,6 +145,12 @@ private:
 public:
     using coord_type = Number;
     
+    /*!
+    \brief Constructs the polygon from the coordinates of the vertices, given
+    as two separate sequences for x and y.
+    
+    If the polygon is not convex, it throws `std::runtime_error`.
+    */
     template<typename XIterator, typename YIterator>
     explicit ConvexPolygon(XIterator xbegin, XIterator xend, YIterator ybegin) {
         this->fill_vertices(xbegin, xend, ybegin);
@@ -121,6 +164,12 @@ public:
         }
     }
     
+    /*!
+    \brief Constructs the polygon from the coordinates of the vertices, given
+    as a vector of pairs {x, y}.
+    
+    If the polygon is not convex, it throws `std::runtime_error`.
+    */
     ConvexPolygon(const std::vector<std::pair<Number, Number>> &vertices):
         ConvexPolygon(
             tuple_iterator::tuple_iterator<0>(vertices.begin()),
@@ -129,6 +178,14 @@ public:
         )
     {;}
     
+    /*!
+    \brief Checks if the polygon contains a point.
+    
+    The point is specified by its coordinates `x` and `y`. Points on the edges
+    of the polygon are considered inside. If `Number` (aka `coord_type`) is an
+    integer type, the computation is exact (it does not suffer from rounding
+    errors).
+    */
     bool contains_point(const Number &x, const Number &y) const {
         for (size_t i = 0; i < vertices.size(); ++i) {
             const Vertex &curr = vertices[i];
@@ -145,10 +202,18 @@ public:
         return true;
     }
     
+    /*!
+    \brief Return a vector of the x coordinate of the vertices, with the
+    order given at construction.
+    */
     std::vector<Number> copy_x() const {
         return get_from_vertices([](const Vertex &v) { return v.x; });
     }
     
+    /*!
+    \brief Return a vector of the y coordinate of the vertices, with the
+    order given at construction.
+    */
     std::vector<Number> copy_y() const {
         return get_from_vertices([](const Vertex &v) { return v.y; });
     }
