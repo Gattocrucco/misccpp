@@ -1,4 +1,4 @@
-# misccpp
+# misccpp {#mainpage}
 
 Miscellaneous code in C++.
 
@@ -8,7 +8,12 @@ They are just header files so place them alongside your code. The standard is C+
 
 ## Documentation
 
-None. See the tests for examples. Use `make` to compile and run all the tests.
+Use `doxygen` to generate the documentation in html format, or read it directly
+inside the files.
+
+## Tests
+
+Use `make` to compile and run all the tests.
 
 ## Headers
 
@@ -16,7 +21,7 @@ None. See the tests for examples. Use `make` to compile and run all the tests.
 
 * `ConvexPolygon.hpp`: check if a polygon is convex and if a point is inside the polygon. Uses `tuple_iterator.hpp`.
 
-* `LinearFit.hpp`: provides an interface to [least squares fitting](http://eigen.tuxfamily.org/dox/group__LeastSquares.html). Requires [Eigen](https://eigen.tuxfamily.org).
+* `LinearFit.hpp`: provides an interface to [linear least squares fitting](http://eigen.tuxfamily.org/dox/group__LeastSquares.html). Requires [Eigen](https://eigen.tuxfamily.org).
 
 * `LinearInterp.hpp`: linear interpolator. Uses `argsort.hpp`.
 
