@@ -1,13 +1,8 @@
 #include <iostream>
-#include <cstdlib>
 #include <vector>
-#include <algorithm>
-#include <cmath>
 #include <stdexcept>
 
 #include "LinearInterp.hpp"
-
-using namespace std;
 
 template<typename Operation>
 bool throws(Operation operation) {
@@ -15,36 +10,34 @@ bool throws(Operation operation) {
     try {
         operation();
         throwed = false;
-    } catch(exception &e) {
+    } catch(std::exception &e) {
         throwed = true;
     } catch(...) {
-        cerr << "throws(): cannot catch exception";
+        std::cerr << "throws(): cannot catch exception";
         throw;
     }
     return throwed;
 }
 
 int main() {
-    const int len {20};
-    vector<double> x(len), y(len);
-    for (int i = 0; i < len; ++i) {
-        x[i] = double(rand()) / RAND_MAX;
-        y[i] = double(rand()) / RAND_MAX;
-    }
+    std::vector<int> x {10, 20, 30, 40, 50};
+    std::vector<int> y {0, 1, 2, 1, 0};
     
-    LinearInterp<double, double> interp;
-    interp.set_data(x.begin(), x.end(), y.begin());
+    LinearInterp<int, double> interp;
+    assert(throws([&]() {
+        interp.set_data(x.begin(), x.begin() + 1, y.begin());
+    }));
+    assert(throws([&]() {
+        interp(10);
+    }));
+
+    interp.set_data(x.begin(), x.end(), y.begin(), true);
     
-    const int plot_len {1000};
-    vector<double> plot_x(plot_len), plot_y(plot_len);
-    const auto minmax = minmax_element(x.begin(), x.end());
-    const double min {*minmax.first - 0.5}, max {*minmax.second + 0.5};
-    for (int i = 0; i < plot_len; ++i) {
-        plot_x[i] = min + (max - min) / (plot_len - 1) * i;
-        plot_y[i] = interp(
-            plot_x[i], decltype(interp)::OutOfRange::Extrapolate
-        );
-    }
+    assert(interp(15) == 0.5);
     
-    assert(throws([&]() { interp(min - 1); }));
+    assert(interp(5, decltype(interp)::OutOfRange::Extrapolate) == -0.5);
+    
+    assert(throws([&]() {
+        interp(5);
+    }));
 }

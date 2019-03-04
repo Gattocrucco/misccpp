@@ -90,7 +90,7 @@ public:
         const size_t length = std::distance(xbegin, xend);
         if (length < 2) {
             throw std::runtime_error(
-                "LinearInterp: set_data(): at least 2 points needed"
+                "LinearInterp::set_data: at least 2 points needed"
             );
         }
         x.resize(length);
@@ -123,10 +123,16 @@ public:
         const XValue &x_point,
         OutOfRange pl=OutOfRange::Throw
     ) const {
+        if (x.size() < 2) {
+            throw std::runtime_error(
+                "LinearInterp::operator(): at least two points needed,"
+                "have you called `set_data` on the interpolator?"
+            );
+        }
         if (pl == OutOfRange::Throw) {
             if (x_point < x.front() or x.back() < x_point) {
                 throw std::runtime_error(
-                    "LinearInterp: operator(): x_point outside range"
+                    "LinearInterp::operator(): x_point outside range"
                 );
             }
         }
@@ -149,7 +155,7 @@ public:
         const YValue &left_y {y[i - 1]};
         if (right_x == left_x) {
             throw std::runtime_error(
-                "LinearInterp: operator(): two equal consecutive x in data"
+                "LinearInterp::operator(): two equal consecutive x in data"
             );
         }
         return left_y +
