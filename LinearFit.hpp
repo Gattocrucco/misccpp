@@ -35,12 +35,14 @@ Basic example:
 #include <cmath>
 #include "LinearFit.hpp"
 int main() {
+    constexpr double pi = 3.141592653589793;
+    
     std::vector<double> x {0, 1, 2, 3, 4};
     std::vector<double> y {-1, 0, -1, -2, -1};
 
-    LinearFit<double> fit(y, x, {            // y =
-        [](double x) { return 1; },          // = A * 1 + 
-        [](double x) { return std::sin(x); } // + B * sin(x)
+    LinearFit<double> fit(y, x, {                   // y =
+        [](double x) { return 1; },                 // = A * 1 + 
+        [](double x) { return std::sin(x * pi/2); } // + B * sin(x * pi/2)
     }); // NOTE: first y then x
     
     double A = fit[0]; // -1
@@ -268,7 +270,7 @@ public:
     /*!
     \brief Returns the `index`th fitted parameter.
     
-    The indexes of the parameters are 0-based and are implicitly defined by the
+    The indices of the parameters are 0-based and are implicitly defined by the
     order of the functions when constructing the fit object.
     */
     Scalar operator[](size_t index) const {
@@ -287,8 +289,8 @@ public:
         size_t i;
         const LinearFit<Scalar> * const fit;
     public:
-        explicit Iterator(size_t idx, const LinearFit<Scalar> *fit):
-            i {idx}, fit {fit}
+        explicit Iterator(size_t idx, const LinearFit<Scalar> *fit_obj):
+            i {idx}, fit {fit_obj}
         { ; }
         void operator++() {
             ++i;
@@ -299,7 +301,7 @@ public:
         friend bool operator==(const Iterator &i1, const Iterator &i2) {
             if (i1.fit != i2.fit) {
                 throw std::runtime_error(
-                    "LinearFit<>::Iterator::operator==: comparing iterators"
+                    "LinearFit::Iterator::operator==: comparing iterators "
                     "from different fit objects"
                 );
             }
