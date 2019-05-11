@@ -1,2 +1,1 @@
-#define UNCERTAINTIES_IMPL
-#include <uncertainties/ureal.hpp>
+#include <uncertainties/impl.hpp>
