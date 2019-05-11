@@ -8,18 +8,58 @@
 #include <type_traits>
 #include <functional>
 #include <limits>
+#include <cassert>
+#include <stdexcept>
+#include <ostream>
 
 namespace uncertainties {
     using Id = int;
     
     extern Id next_id;
     
-    class NegativeSigma {};
-    
     enum class Order {
         row_major,
         col_major
     };
+    
+    template<typename Real>
+    int _ndigits(const Real &x, const float n) {
+        const float log10x = static_cast<float>(std::log10(std::abs(x)));
+        const int n_int = static_cast<int>(std::floor(n));
+        const float n_frac = n - n_int;
+        const float log10x_frac = log10x - std::floor(log10x);
+        return n_int + (log10x_frac < n_frac ? 1 : 0);
+    }
+    
+    template<typename Real>
+    int _exponent(const Real &x) {
+        return static_cast<int>(std::floor(std::log10(std::abs(x))));
+    }
+    
+    template<typename Real>
+    std::string _mantissa(const Real &x, const int n, int *const e) {
+        const long long m = static_cast<long long>(std::round(x * std::pow(Real(10), n - 1 - *e)));
+        std::string s = std::to_string(std::abs(m));
+        assert(s.size() == n or s.size() == n + 1 or (m == 0 and n < 0));
+        if (n >= 1 and s.size() == n + 1) {
+            *e += 1;
+            s.pop_back();
+        }
+        return s;
+    }
+    
+    void _insert_dot(std::string *s, int n, int e) {
+        e += s->size() - n;
+        n = s->size();
+        if (e >= n - 1) {
+            // no dot at end of mantissa
+        } else if (e >= 0) {
+            s->insert(1 + e, 1, '.');
+        } else if (e <= -1) {
+            s->insert(0, -e, '0');
+            s->insert(1, 1, '.');
+        }
+    }
     
     template<typename Real>
     class UReal {
@@ -41,16 +81,15 @@ namespace uncertainties {
             }
             return s2;
         }
-                
+        
     public:
         using real_type = Real;
         
-        UReal(const Real &n, const Real &s) {
+        UReal(const Real n, const Real s):
+        mu {std::move(n)}, sigma {{next_id, std::move(s)}} {
             if (s < 0) {
-                throw NegativeSigma();
+                throw std::invalid_argument("uncertainties::UReal::UReal: s < 0");
             }
-            this->mu = n;
-            this->sigma[next_id] = s;
             ++next_id;
         }
         
@@ -58,7 +97,7 @@ namespace uncertainties {
             ;
         }
         
-        const Real &n() const {
+        const Real &n() const noexcept {
             return this->mu;
         }
         
@@ -66,13 +105,47 @@ namespace uncertainties {
             return std::sqrt(this->s2());
         }
         
-        std::string format() {
-            return std::to_string(n()) + " ± " + std::to_string(s());
+        std::string format(const float errdig=1.5f, const std::string &sep=" ± ") const {
+            if (errdig <= 1.0f) {
+                throw std::invalid_argument("uncertainties::UReal::format: errdig <= 1.0");
+            }
+            Real s = this->s();
+            if (s == 0) {
+                return std::to_string(this->mu) + sep + "0";
+            }
+            const int sndig = _ndigits(s, errdig);
+            int sexp = _exponent(s);
+            int muexp = this->mu != 0 ? _exponent(this->mu) : sexp - sndig - 1;
+            std::string smant = _mantissa(s, sndig, &sexp);
+            const int mundig = sndig + muexp - sexp;
+            std::string mumant = _mantissa(mu, mundig, &muexp);
+            bool use_exp;
+            int base_exp;
+            if (mundig >= sndig) {
+                use_exp = muexp >= mundig or muexp < -1;
+                base_exp = muexp;
+            } else {
+                use_exp = sexp >= sndig or sexp < -1;
+                base_exp = sexp;
+            }
+            if (use_exp) {
+                _insert_dot(&mumant, mundig, muexp - base_exp);
+                _insert_dot(&smant, sndig, sexp - base_exp);
+                return "(" + mumant + sep + smant + ")e" + std::to_string(base_exp);
+            } else {
+                _insert_dot(&mumant, mundig, muexp);
+                _insert_dot(&smant, sndig, sexp);
+                return mumant + sep + smant;
+            }
         }
         
-        friend Type copy_unc(const Real &n, const Type &x) {
+        operator std::string() {
+            return std::to_string(n()) + "+/-" + std::to_string(s());
+        }
+        
+        friend Type copy_unc(const Real n, const Type &x) {
             Type y;
-            y.mu = n;
+            y.mu = std::move(n);
             y.sigma = x.sigma;
             return y;
         }
@@ -82,7 +155,6 @@ namespace uncertainties {
         
         template<typename OtherReal>
         operator UReal<OtherReal>() {
-            static_assert(!std::is_same<Real, OtherReal>::value, "what??");
             UReal<OtherReal> x;
             x.mu = this->mu;
             for (const auto &it : this->sigma) {
@@ -119,9 +191,9 @@ namespace uncertainties {
             return cov(x, y) / std::sqrt(var(x) * var(y));
         }
         
-        friend Type unary(const Type &x, const Real &mu, const Real &dx) {
+        friend Type unary(const Type &x, const Real mu, const Real &dx) {
             Type y;
-            y.mu = mu;
+            y.mu = std::move(mu);
             y.sigma = x.sigma;
             for (auto &it : y.sigma) {
                 it.second *= dx;
@@ -130,9 +202,10 @@ namespace uncertainties {
         }
     
         friend Type binary(const Type &x, const Type &y,
-                           const Real &mu, const Real &dx, const Real &dy) {
+                           const Real mu,
+                           const Real &dx, const Real &dy) {
             Type z;
-            z.mu = mu;
+            z.mu = std::move(mu);
             for (const auto &it : x.sigma) {
                 z.sigma[it.first] = dx * it.second;
             }
@@ -143,9 +216,9 @@ namespace uncertainties {
         }
         
         template<typename XIt, typename DxIt>
-        friend Type nary(XIt xbegin, XIt xend, const Real &mu, DxIt dxbegin) {
+        friend Type nary(XIt xbegin, XIt xend, const Real mu, DxIt dxbegin) {
             Type z;
-            z.mu = mu;
+            z.mu = std::move(mu);
             for (; xbegin != xend; ++xbegin, ++dxbegin) {
                 const Type &x = *xbegin;
                 const Real &dx = *dxbegin;
@@ -156,7 +229,7 @@ namespace uncertainties {
             return z;
         }
                 
-        const Type &binary_assign(const Type &x, const Real &mu,
+        const Type &binary_assign(const Type &x, const Real mu,
                                   const Real &dt, const Real &dx) {
             if (&x == this) {
                 const Real d = dt + dx;
@@ -173,7 +246,7 @@ namespace uncertainties {
                     this->sigma[it.first] += dx * it.second;
                 }
             }
-            this->mu = mu; // keep this last in case &x == this
+            this->mu = std::move(mu); // keep this last in case &x == this
             return *this;
         }
 
@@ -211,12 +284,25 @@ namespace uncertainties {
             const Real mu = this->mu * inv_x;
             return binary_assign(x, mu, inv_x, -mu * inv_x);
         }
-        // abs?
-        // fmod?
-        // remainder?
-        // fma?
-        // fmax?
-        // fmin?
+        friend Type abs(const Type &x) {
+            return unary(x, std::abs(x.mu), x.mu >= 0 ? 1 : -1);
+        }
+        friend Type fmod(const Type &x, const Type &y) {
+            return binary(x, y, std::fmod(x.mu, y.mu), 1, -std::trunc(x.mu / y.mu));
+        }
+        friend Type remainder(const Type &x, const Type &y) {
+            return binary(x, y, std::remainder(x.mu, y.mu), 1, -std::round(x.mu / y.mu));
+        }
+        friend Type fmax(const Type &x, const Type &y) {
+            const Real max = std::fmax(x.mu, y.mu);
+            const bool c = max == x;
+            return binary(x, y, max, c ? 1 : 0, c ? 0 : 1);
+        }
+        friend Type fmin(const Type &x, const Type &y) {
+            const Real min = std::fmin(x.mu, y.mu);
+            const bool c = min == x;
+            return binary(x, y, min, c ? 1 : 0, c ? 0 : 1);
+        }
         // fdim?
         friend Type exp(const Type &x) {
             return unary(x, std::exp(x.mu), std::exp(x.mu));
@@ -297,11 +383,14 @@ namespace uncertainties {
         friend Type atanh(const Type &x) {
             return unary(x, std::atanh(x.mu), Real(1) / (1 - x.mu * x.mu));
         }
-        // erf
-        // erfc
-        // tgamma
-        // lgamma
-        // copysign?
+        friend Type erf(const Type &x) {
+            static const Real erf_coeff = Real(2) / std::sqrt(Real(3.141592653589793238462643383279502884L));
+            return unary(x, std::erf(x.mu), erf_coeff * std::exp(-x.mu * x.mu));
+        }
+        friend Type erfc(const Type &x) {
+            static const Real erf_coeff = Real(2) / std::sqrt(Real(3.141592653589793238462643383279502884L));
+            return unary(x, std::erfc(x.mu), -erf_coeff * std::exp(-x.mu * x.mu));
+        }
         friend bool isfinite(const Type &x) {
             return std::isfinite(x.mu) and std::isfinite(x.s2());
         }
@@ -374,16 +463,26 @@ namespace uncertainties {
     }
     
     template<typename Real>
+    constexpr Real default_step() {
+        return (1 << (std::numeric_limits<Real>::digits / 2))
+               * std::numeric_limits<Real>::epsilon();
+    };
+    
+    template<typename Real>
     std::function<UReal<Real>(const UReal<Real> &)>
     uunary(const std::function<Real(Real)> &f,
-           const Real &step=(1 << (std::numeric_limits<Real>::digits / 2))
-                            * std::numeric_limits<Real>::epsilon()) {
+           const Real &step=default_step<Real>()) {
         return [f, step](const UReal<Real> &x) {
             const Real &mu = x.n();
             const Real fmu = f(mu);
             const Real dx = (f(mu + step) - fmu) / step;
             return unary(x, fmu, dx);
         };
+    }
+    
+    template<typename Real, typename CharT>
+    std::basic_ostream<CharT> &operator<<(std::basic_ostream<CharT> &stream, const UReal<Real> &x) {
+        return stream << x.format();
     }
     
     using udouble = UReal<double>;
