@@ -1,26 +1,18 @@
-#ifndef UNCERTAINTIES_HPP_07A47EC2
-#define UNCERTAINTIES_HPP_07A47EC2
+#ifndef UNCERTAINTIES_UREAL_HPP_07A47EC2
+#define UNCERTAINTIES_UREAL_HPP_07A47EC2
 
 #include <map>
-#include <numeric>
 #include <cmath>
 #include <string>
-#include <type_traits>
 #include <functional>
 #include <limits>
 #include <cassert>
 #include <stdexcept>
-#include <ostream>
 
 namespace uncertainties {
     using Id = int;
     
     extern Id next_id;
-    
-    enum class Order {
-        row_major,
-        col_major
-    };
     
     template<typename Real>
     int _ndigits(const Real &x, const float n) {
@@ -48,18 +40,7 @@ namespace uncertainties {
         return s;
     }
     
-    void _insert_dot(std::string *s, int n, int e) {
-        e += s->size() - n;
-        n = s->size();
-        if (e >= n - 1) {
-            // no dot at end of mantissa
-        } else if (e >= 0) {
-            s->insert(1 + e, 1, '.');
-        } else if (e <= -1) {
-            s->insert(0, -e, '0');
-            s->insert(1, 1, '.');
-        }
-    }
+    void _insert_dot(std::string *s, int n, int e);
     
     template<typename Real>
     class UReal {
@@ -118,7 +99,7 @@ namespace uncertainties {
             int muexp = this->mu != 0 ? _exponent(this->mu) : sexp - sndig - 1;
             std::string smant = _mantissa(s, sndig, &sexp);
             const int mundig = sndig + muexp - sexp;
-            std::string mumant = _mantissa(mu, mundig, &muexp);
+            std::string mumant = _mantissa(this->mu, mundig, &muexp);
             bool use_exp;
             int base_exp;
             if (mundig >= sndig) {
@@ -284,174 +265,7 @@ namespace uncertainties {
             const Real mu = this->mu * inv_x;
             return binary_assign(x, mu, inv_x, -mu * inv_x);
         }
-        friend Type abs(const Type &x) {
-            return unary(x, std::abs(x.mu), x.mu >= 0 ? 1 : -1);
-        }
-        friend Type fmod(const Type &x, const Type &y) {
-            return binary(x, y, std::fmod(x.mu, y.mu), 1, -std::trunc(x.mu / y.mu));
-        }
-        friend Type remainder(const Type &x, const Type &y) {
-            return binary(x, y, std::remainder(x.mu, y.mu), 1, -std::round(x.mu / y.mu));
-        }
-        friend Type fmax(const Type &x, const Type &y) {
-            const Real max = std::fmax(x.mu, y.mu);
-            const bool c = max == x;
-            return binary(x, y, max, c ? 1 : 0, c ? 0 : 1);
-        }
-        friend Type fmin(const Type &x, const Type &y) {
-            const Real min = std::fmin(x.mu, y.mu);
-            const bool c = min == x;
-            return binary(x, y, min, c ? 1 : 0, c ? 0 : 1);
-        }
-        // fdim?
-        friend Type exp(const Type &x) {
-            return unary(x, std::exp(x.mu), std::exp(x.mu));
-        }
-        friend Type exp2(const Type &x) {
-            return unary(x, std::exp2(x.mu), std::log(Real(2)) * std::exp(x.mu)); 
-        }
-        friend Type expm1(const Type &x) {
-            return unary(x, std::expm1(x.mu), std::exp(x.mu));
-        }
-        friend Type log(const Type &x) {
-            return unary(x, std::log(x.mu), Real(1) / x.mu);
-        }
-        friend Type log10(const Type &x) {
-            return unary(x, std::log10(x.mu), Real(1) / (x.mu * std::log(Real(10))));
-        }
-        friend Type log2(const Type &x) {
-            return unary(x, std::log2(x.mu), Real(1) / (x.mu * std::log(Real(2))));
-        }
-        friend Type log1p(const Type &x) {
-            return unary(x, std::log1p(x.mu), Real(1) / (Real(1) + x.mu));
-        }
-        friend Type pow(const Type &x, const Type &y) {
-            const Real p = std::pow(x.mu, y.mu);
-            return binary(x, y, p, p * y.mu / x.mu, p * std::log(x.mu));
-        }
-        friend Type sqrt(const Type &x) {
-            return unary(x, std::sqrt(x.mu), Real(1) / (2 * std::sqrt(x.mu)));
-        }
-        friend Type cbrt(const Type &x) {
-            return unary(x, std::cbrt(x.mu), std::pow(x.mu, -Real(2) / Real(3)) / Real(3));
-        }
-        friend Type hypot(const Type &x, const Type &y) {
-            const Real h = std::hypot(x.mu, y.mu);
-            return binary(x, y, h, x.mu / h, y.mu / h);
-        }
-        friend Type sin(const Type &x) {
-            return unary(x, std::sin(x.mu), std::cos(x.mu));
-        }
-        friend Type cos(const Type &x) {
-            return unary(x, std::cos(x.mu), -std::sin(x.mu));
-        }
-        friend Type tan(const Type &x) {
-            const Real t = std::tan(x.mu);
-            return unary(x, t, Real(1) + t * t);
-        }
-        friend Type asin(const Type &x) {
-            return unary(x, std::asin(x.mu), Real(1) / std::sqrt(1 - x.mu * x.mu));
-        }
-        friend Type acos(const Type &x) {
-            return unary(x, std::acos(x.mu), -Real(1) / std::sqrt(1 - x.mu * x.mu));
-        }
-        friend Type atan(const Type &x) {
-            return unary(x, std::atan(x.mu), Real(1) / (1 + x.mu * x.mu));
-        }
-        friend Type atan2(const Type &x, const Type &y) {
-            const Real yx = y.mu / x.mu;
-            const Real dy = Real(1) / ((Real(1) + yx * yx) * x);
-            const Real dx = dy * (-yx);
-            return binary(x, y, std::atan2(x.mu, y.mu), dx, dy);
-        }
-        friend Type sinh(const Type &x) {
-            return unary(x, std::sinh(x.mu), std::cosh(x.mu));
-        }
-        friend Type cosh(const Type &x) {
-            return unary(x, std::cosh(x.mu), std::sinh(x.mu));
-        }
-        friend Type tanh(const Type &x) {
-            const Real t = std::tanh(x.mu);
-            return unary(x, t, Real(1) - t * t);
-        }
-        friend Type asinh(const Type &x) {
-            return unary(x, std::asinh(x.mu), Real(1) / std::sqrt(x.mu * x.mu + 1));
-        }
-        friend Type acosh(const Type &x) {
-            return unary(x, std::acosh(x.mu), Real(1) / std::sqrt(x.mu * x.mu - 1));
-        }
-        friend Type atanh(const Type &x) {
-            return unary(x, std::atanh(x.mu), Real(1) / (1 - x.mu * x.mu));
-        }
-        friend Type erf(const Type &x) {
-            static const Real erf_coeff = Real(2) / std::sqrt(Real(3.141592653589793238462643383279502884L));
-            return unary(x, std::erf(x.mu), erf_coeff * std::exp(-x.mu * x.mu));
-        }
-        friend Type erfc(const Type &x) {
-            static const Real erf_coeff = Real(2) / std::sqrt(Real(3.141592653589793238462643383279502884L));
-            return unary(x, std::erfc(x.mu), -erf_coeff * std::exp(-x.mu * x.mu));
-        }
-        friend bool isfinite(const Type &x) {
-            return std::isfinite(x.mu) and std::isfinite(x.s2());
-        }
-        friend bool isnormal(const Type &x) {
-            return std::isnormal(x.mu) and std::isnormal(x.s2());
-        }
     };
-    
-    template<typename InputIt, typename OutputIt, typename Operation>
-    OutputIt outer(InputIt begin, InputIt end, OutputIt matrix,
-                   Operation op, Order order=Order::row_major) {
-        for (InputIt i = begin; i != end; ++i) {
-            for (InputIt j = begin; j != end; ++j) {
-                *matrix = order == Order::row_major ? op(*i, *j) : op(*j, *i);
-                ++matrix;
-            }
-        }
-        return matrix;
-    }
-
-    template<typename OutVector, typename InVector, typename Operation>
-    OutVector outer(InVector x, Operation op, Order order=Order::row_major) {
-        const typename InVector::size_type n = x.size();
-        OutVector matrix(n * n);
-        outer(std::begin(x), std::end(x), std::begin(matrix), op, order);
-        return matrix;
-    }
-    
-    template<typename InputIt, typename OutputIt>
-    OutputIt cov_matrix(InputIt begin, InputIt end, OutputIt matrix,
-                        Order order=Order::row_major) {
-        using Type = typename InputIt::value_type;
-        return outer(begin, end, matrix, [](const Type &x, const Type &y) {
-            return cov(x, y);
-        }, order);
-    }
-    
-    template<typename OutVector, typename InVector>
-    OutVector cov_matrix(InVector x, Order order=Order::row_major) {
-        using Type = typename InVector::value_type;
-        return outer<OutVector>(x, [](const Type &x, const Type &y) {
-            return cov(x, y);
-        }, order);
-    }
-    
-    template<typename InputIt, typename OutputIt>
-    OutputIt corr_matrix(InputIt begin, InputIt end, OutputIt matrix,
-                        Order order=Order::row_major) {
-        using Type = typename InputIt::value_type;
-        return outer(begin, end, matrix, [](const Type &x, const Type &y) {
-            return corr(x, y);
-        }, order);
-    }
-    
-    template<typename OutVector, typename InVector>
-    OutVector corr_matrix(InVector x, Order order=Order::row_major) {
-        using Type = typename InVector::value_type;
-        return outer<OutVector>(x, [](const Type &x, const Type &y) {
-            return corr(x, y);
-        }, order);
-    }
     
     template<typename Real>
     std::function<UReal<Real>(const UReal<Real> &)>
@@ -480,17 +294,25 @@ namespace uncertainties {
         };
     }
     
-    template<typename Real, typename CharT>
-    std::basic_ostream<CharT> &operator<<(std::basic_ostream<CharT> &stream, const UReal<Real> &x) {
-        return stream << x.format();
-    }
-    
     using udouble = UReal<double>;
     using ufloat = UReal<float>;
     
 #ifdef UNCERTAINTIES_IMPL
     Id next_id {};
+
+    void _insert_dot(std::string *s, int n, int e) {
+        e += s->size() - n;
+        n = s->size();
+        if (e >= n - 1) {
+            // no dot at end of mantissa
+        } else if (e >= 0) {
+            s->insert(1 + e, 1, '.');
+        } else if (e <= -1) {
+            s->insert(0, -e, '0');
+            s->insert(1, 1, '.');
+        }
+    }
 #endif
 }
 
-#endif /* end of include guard: UNCERTAINTIES_HPP_07A47EC2 */
+#endif /* end of include guard: UNCERTAINTIES_UREAL_HPP_07A47EC2 */

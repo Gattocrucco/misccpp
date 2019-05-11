@@ -1,8 +1,12 @@
-# files without extension, apart from Makefile
+# files without extension
 *
 !*.*
 !Makefile
 !Doxyfile
+!uncertainties
 
 # macOS
 .DS_Store
+
+# object files
+*.o

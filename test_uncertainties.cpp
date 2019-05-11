@@ -3,12 +3,14 @@
 #include <cmath>
 #include <cstdio>
 
-#define UNCERTAINTIES_IMPL
-#include "uncertainties.hpp"
+#include <uncertainties/stat.hpp>
+#include <uncertainties/io.hpp>
+#include <uncertainties/math.hpp>
+#include <uncertainties/ureal.hpp>
 
-using uncertainties::udouble;
-using uncertainties::ufloat;
 namespace unc = uncertainties;
+using unc::udouble;
+using unc::ufloat;
 
 template<typename Vector>
 void print_matrix(Vector m) {
