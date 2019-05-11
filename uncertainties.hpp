@@ -6,11 +6,13 @@
 #include <cmath>
 #include <string>
 #include <type_traits>
+#include <functional>
+#include <limits>
 
 namespace uncertainties {
-    using ID = int;
+    using Id = int;
     
-    extern ID next_id;
+    extern Id next_id;
     
     class NegativeSigma {};
     
@@ -25,7 +27,7 @@ namespace uncertainties {
         using Type = UReal<Real>;
         
         Real mu;
-        std::map<ID, Real> sigma;
+        std::map<Id, Real> sigma;
         
         UReal() {
             ;
@@ -39,51 +41,7 @@ namespace uncertainties {
             }
             return s2;
         }
-        
-        friend Type unary(const Type &x, const Real &mu, const Real &dx) {
-            Type y;
-            y.mu = mu;
-            y.sigma = x.sigma;
-            for (auto &it : y.sigma) {
-                it.second *= dx;
-            }
-            return y;
-        }
-    
-        friend Type binary(const Type &x, const Type &y,
-                           const Real &mu, const Real &dx, const Real &dy) {
-            Type z;
-            z.mu = mu;
-            for (const auto &it : x.sigma) {
-                z.sigma[it.first] = dx * it.second;
-            }
-            for (const auto &it : y.sigma) {
-                z.sigma[it.first] += dy * it.second;
-            }
-            return z;
-        }
-        
-        const Type &binary_assign(const Type &x, const Real &mu,
-                                  const Real &dt, const Real &dx) {
-            if (&x == this) {
-                const Real d = dt + dx;
-                for (auto &it : this->sigma) {
-                    it.second *= d;
-                }
-            } else {
-                if (dt != 1) {
-                    for (auto &it : this->sigma) {
-                        it.second *= dt;
-                    }
-                }
-                for (const auto &it : x.sigma) {
-                    this->sigma[it.first] += dx * it.second;
-                }
-            }
-            this->mu = mu; // keep this last in case &x == this
-            return *this;
-        }
-        
+                
     public:
         using real_type = Real;
         
@@ -100,7 +58,7 @@ namespace uncertainties {
             ;
         }
         
-        Real n() const {
+        const Real &n() const {
             return this->mu;
         }
         
@@ -161,6 +119,64 @@ namespace uncertainties {
             return cov(x, y) / std::sqrt(var(x) * var(y));
         }
         
+        friend Type unary(const Type &x, const Real &mu, const Real &dx) {
+            Type y;
+            y.mu = mu;
+            y.sigma = x.sigma;
+            for (auto &it : y.sigma) {
+                it.second *= dx;
+            }
+            return y;
+        }
+    
+        friend Type binary(const Type &x, const Type &y,
+                           const Real &mu, const Real &dx, const Real &dy) {
+            Type z;
+            z.mu = mu;
+            for (const auto &it : x.sigma) {
+                z.sigma[it.first] = dx * it.second;
+            }
+            for (const auto &it : y.sigma) {
+                z.sigma[it.first] += dy * it.second;
+            }
+            return z;
+        }
+        
+        template<typename XIt, typename DxIt>
+        friend Type nary(XIt xbegin, XIt xend, const Real &mu, DxIt dxbegin) {
+            Type z;
+            z.mu = mu;
+            for (; xbegin != xend; ++xbegin, ++dxbegin) {
+                const Type &x = *xbegin;
+                const Real &dx = *dxbegin;
+                for (const auto &it: x.sigma) {
+                    z.sigma[it.first] += dx * it.second;
+                }
+            }
+            return z;
+        }
+                
+        const Type &binary_assign(const Type &x, const Real &mu,
+                                  const Real &dt, const Real &dx) {
+            if (&x == this) {
+                const Real d = dt + dx;
+                for (auto &it : this->sigma) {
+                    it.second *= d;
+                }
+            } else {
+                if (dt != 1) {
+                    for (auto &it : this->sigma) {
+                        it.second *= dt;
+                    }
+                }
+                for (const auto &it : x.sigma) {
+                    this->sigma[it.first] += dx * it.second;
+                }
+            }
+            this->mu = mu; // keep this last in case &x == this
+            return *this;
+        }
+
         friend Type operator+(const Type &x) {
             return unary(x, x.mu, 1);
         }
@@ -293,7 +309,7 @@ namespace uncertainties {
             return std::isnormal(x.mu) and std::isnormal(x.s2());
         }
     };
-        
+    
     template<typename InputIt, typename OutputIt, typename Operation>
     OutputIt outer(InputIt begin, InputIt end, OutputIt matrix,
                    Operation op, Order order=Order::row_major) {
@@ -348,11 +364,33 @@ namespace uncertainties {
         }, order);
     }
     
+    template<typename Real>
+    std::function<UReal<Real>(const UReal<Real> &)>
+    uunary(const std::function<Real(Real)> &f,
+           const std::function<Real(Real)> &df) {
+        return [f, df](const UReal<Real> &x) {
+            return unary(x, f(x.n()), df(x.n()));
+        };
+    }
+    
+    template<typename Real>
+    std::function<UReal<Real>(const UReal<Real> &)>
+    uunary(const std::function<Real(Real)> &f,
+           const Real &step=(1 << (std::numeric_limits<Real>::digits / 2))
+                            * std::numeric_limits<Real>::epsilon()) {
+        return [f, step](const UReal<Real> &x) {
+            const Real &mu = x.n();
+            const Real fmu = f(mu);
+            const Real dx = (f(mu + step) - fmu) / step;
+            return unary(x, fmu, dx);
+        };
+    }
+    
     using udouble = UReal<double>;
     using ufloat = UReal<float>;
     
 #ifdef UNCERTAINTIES_IMPL
-    ID next_id {};
+    Id next_id {};
 #endif
 }
 
