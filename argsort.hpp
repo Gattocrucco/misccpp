@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <numeric>
 
 /*! \file
 \brief C++ port of Numpy's `argsort`.
@@ -36,21 +37,6 @@ int main() {
 */
 namespace argsort {
     /*!
-    \brief Fill a sequence of length `n` with indices `0...(n-1)`.
-    
-    Fills the sequence [`begin`, `end`) with increasing values starting from the
-    default constructed value of the referenced type and increasing with `++`.
-    */
-    template<typename Iterator>
-    void fill_range(Iterator begin, Iterator end) {
-        using Type = typename std::iterator_traits<Iterator>::value_type;
-        for (Type i {}; begin != end; ++begin) {
-            *begin = i;
-            ++i;
-        }
-    }
-    
-    /*!
     \brief Compute indices that indicate how to sort an array.
     
     Fills the sequence [`indices_begin`, `indices_end`) with indices such that,
@@ -64,7 +50,7 @@ namespace argsort {
         ValueIterator data
     ) {
         using Index = typename std::iterator_traits<IndexIterator>::value_type;
-        fill_range(indices_begin, indices_end);
+        std::iota(indices_begin, indices_end, Index{});
         std::sort(indices_begin, indices_end,
         [=](const Index &a, const Index &b) {
             return *(data + a) < *(data + b);
