@@ -30,7 +30,9 @@ namespace uncertainties {
     
     template<typename Real>
     std::string _mantissa(const Real &x, const int n, int *const e) {
-        const long long m = static_cast<long long>(std::round(x * std::pow(Real(10), n - 1 - *e)));
+        const long long m = static_cast<long long>(
+            std::round(x * std::pow(Real(10), n - 1 - *e))
+        );
         std::string s = std::to_string(std::abs(m));
         assert(s.size() == n or s.size() == n + 1 or (m == 0 and n < 0));
         if (n >= 1 and s.size() == n + 1) {
@@ -86,7 +88,8 @@ namespace uncertainties {
             return std::sqrt(this->s2());
         }
         
-        std::string format(const float errdig=1.5f, const std::string &sep=" ± ") const {
+        std::string format(const float errdig=1.5f,
+                           const std::string &sep=" ± ") const {
             if (errdig <= 1.0f) {
                 throw std::invalid_argument("uncertainties::UReal::format: errdig <= 1.0");
             }
@@ -100,6 +103,7 @@ namespace uncertainties {
             std::string smant = _mantissa(s, sndig, &sexp);
             const int mundig = sndig + muexp - sexp;
             std::string mumant = _mantissa(this->mu, mundig, &muexp);
+            const std::string musign = this->mu < 0 ? "-" : "";
             bool use_exp;
             int base_exp;
             if (mundig >= sndig) {
@@ -112,11 +116,11 @@ namespace uncertainties {
             if (use_exp) {
                 _insert_dot(&mumant, mundig, muexp - base_exp);
                 _insert_dot(&smant, sndig, sexp - base_exp);
-                return "(" + mumant + sep + smant + ")e" + std::to_string(base_exp);
+                return "(" + musign + mumant + sep + smant + ")e" + std::to_string(base_exp);
             } else {
                 _insert_dot(&mumant, mundig, muexp);
                 _insert_dot(&smant, sndig, sexp);
-                return mumant + sep + smant;
+                return musign + mumant + sep + smant;
             }
         }
         
