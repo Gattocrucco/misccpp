@@ -1,6 +1,10 @@
 #ifndef UNCERTAINTIES_STAT_HPP_C71B9D96
 #define UNCERTAINTIES_STAT_HPP_C71B9D96
 
+/*! \file
+\brief Defines functions to manipulate covariance matrices.
+*/
+
 namespace uncertainties {
     template<typename Real>
     class UReal;

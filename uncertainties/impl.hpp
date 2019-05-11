@@ -1,6 +1,10 @@
 #ifndef UNCERTAINTIES_IMPL_HPP_8AC76B25
 #define UNCERTAINTIES_IMPL_HPP_8AC76B25
 
+/*! \file
+\brief Import this header in a source file of your choice.
+*/
+
 #include <string>
 
 #include "ureal.hpp"

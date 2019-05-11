@@ -1,6 +1,10 @@
 #ifndef UNCERTAINTIES_MATH_HPP_0A89E052
 #define UNCERTAINTIES_MATH_HPP_0A89E052
 
+/*! \file
+\brief Defines functions of `<cmath>` on `UReal`s.
+*/
+
 #include <cmath>
 
 namespace uncertainties {

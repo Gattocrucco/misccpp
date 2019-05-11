@@ -1,6 +1,10 @@
 #ifndef UNCERTAINTIES_IO_HPP_6DDCDE20
 #define UNCERTAINTIES_IO_HPP_6DDCDE20
 
+/*! \file
+\brief Defines stream operations on `UReal`s.
+*/
+
 #include <ostream>
 
 namespace uncertainties {

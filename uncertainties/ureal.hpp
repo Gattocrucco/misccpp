@@ -1,6 +1,10 @@
 #ifndef UNCERTAINTIES_UREAL_HPP_07A47EC2
 #define UNCERTAINTIES_UREAL_HPP_07A47EC2
 
+/*! \file
+\brief Defines class template `UReal` and basic utilities.
+*/
+
 #include <map>
 #include <cmath>
 #include <string>
@@ -9,10 +13,26 @@
 #include <cassert>
 #include <stdexcept>
 
+/*!
+\brief C++ header library for linear uncertainty propagation.
+
+Basic example:
+~~~{.cpp}
+#include <iostream>
+#include <uncertainties/ureal.hpp>
+namespace unc = uncertainties;
+int main() {
+    unc::udouble x(2, 1), y(2, 1);
+    unc::udouble y = x - x;
+    unc::udouble z = x - y;
+    std::cout << y.format(2) << ", " << z.format(2) << "\n";
+}
+~~~
+*/
 namespace uncertainties {
     using Id = int;
     
-    extern Id next_id;
+    extern Id _next_id;
     
     template<typename Real>
     int _ndigits(const Real &x, const float n) {
@@ -44,6 +64,9 @@ namespace uncertainties {
     
     void _insert_dot(std::string *s, int n, int e);
     
+    /*!
+    \brief Represents a number with associated uncertainty.
+    */
     template<typename Real>
     class UReal {
     private:
@@ -69,11 +92,11 @@ namespace uncertainties {
         using real_type = Real;
         
         UReal(const Real n, const Real s):
-        mu {std::move(n)}, sigma {{next_id, std::move(s)}} {
+        mu {std::move(n)}, sigma {{_next_id, std::move(s)}} {
             if (s < 0) {
                 throw std::invalid_argument("uncertainties::UReal::UReal: s < 0");
             }
-            ++next_id;
+            ++_next_id;
         }
         
         UReal(const Real &n): UReal(n, 0) {
