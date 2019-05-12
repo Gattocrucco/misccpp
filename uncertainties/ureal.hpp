@@ -6,12 +6,11 @@
 */
 
 #include <map>
-#include <cmath>
 #include <string>
 #include <functional>
 #include <limits>
-#include <cassert>
 #include <stdexcept>
+#include <cmath>
 
 /*!
 \brief C++ header library for linear uncertainty propagation.
@@ -34,38 +33,10 @@ namespace uncertainties {
         using Id = int;
     
         extern Id next_id;
-    
-        template<typename Real>
-        int ndigits(const Real &x, const float n) {
-            const float log10x = static_cast<float>(std::log10(std::abs(x)));
-            const int n_int = static_cast<int>(std::floor(n));
-            const float n_frac = n - n_int;
-            const float log10x_frac = log10x - std::floor(log10x);
-            return n_int + (log10x_frac < n_frac ? 1 : 0);
-        }
-    
-        template<typename Real>
-        int exponent(const Real &x) {
-            return static_cast<int>(std::floor(std::log10(std::abs(x))));
-        }
-    
-        template<typename Real>
-        std::string mantissa(const Real &x, const int n, int *const e) {
-            const long long m = static_cast<long long>(
-                std::round(x * std::pow(Real(10), n - 1 - *e))
-            );
-            std::string s = std::to_string(std::abs(m));
-            assert(s.size() == n or s.size() == n + 1 or (m == 0 and n < 0));
-            if (n >= 1 and s.size() == n + 1) {
-                *e += 1;
-                s.pop_back();
-            }
-            return s;
-        }
-    
-        void insert_dot(std::string *s, int n, int e);
-        std::string format_exp(const int e);
     }
+    
+    template<typename Number>
+    std::string format(const Number &, const float, const std::string &);
     
     /*!
     \brief Represents a number with associated uncertainty.
@@ -113,45 +84,14 @@ namespace uncertainties {
         Real s() const {
             return std::sqrt(this->s2());
         }
-        
-        std::string format(const float errdig=1.5f,
-                           const std::string &sep=" ± ") const {
-            if (errdig <= 1.0f) {
-                throw std::invalid_argument("uncertainties::UReal::format: errdig <= 1.0");
-            }
-            Real s = this->s();
-            if (s == 0) {
-                return std::to_string(this->mu) + sep + "0";
-            }
-            const int sndig = internal::ndigits(s, errdig);
-            int sexp = internal::exponent(s);
-            int muexp = this->mu != 0 ? internal::exponent(this->mu) : sexp - sndig - 1;
-            std::string smant = internal::mantissa(s, sndig, &sexp);
-            const int mundig = sndig + muexp - sexp;
-            std::string mumant = internal::mantissa(this->mu, mundig, &muexp);
-            const std::string musign = this->mu < 0 ? "-" : "";
-            bool use_exp;
-            int base_exp;
-            if (mundig >= sndig) {
-                use_exp = muexp >= mundig or muexp < -1;
-                base_exp = muexp;
-            } else {
-                use_exp = sexp >= sndig or sexp < -1;
-                base_exp = sexp;
-            }
-            if (use_exp) {
-                internal::insert_dot(&mumant, mundig, muexp - base_exp);
-                internal::insert_dot(&smant, sndig, sexp - base_exp);
-                return "(" + musign + mumant + sep + smant + ")e" + internal::format_exp(base_exp);
-            } else {
-                internal::insert_dot(&mumant, mundig, muexp);
-                internal::insert_dot(&smant, sndig, sexp);
-                return musign + mumant + sep + smant;
-            }
-        }
-        
+                
         operator std::string() {
             return std::to_string(n()) + "+/-" + std::to_string(s());
+        }
+        
+        template<typename... Args>
+        std::string format(Args... args) const {
+            return uncertainties::format(*this, args...);
         }
         
         friend Type copy_unc(const Real n, const Type &x) {
@@ -298,6 +238,26 @@ namespace uncertainties {
     };
     
     template<typename Real>
+    inline const Real &nom(const UReal<Real> &x) noexcept {
+        return x.n();
+    }
+    
+    template<typename Real>
+    inline Real sdev(const UReal<Real> &x) {
+        return x.s();
+    }
+    
+    template<typename Number>
+    inline const Number &nom(const Number &x) noexcept {
+        return x;
+    }
+    
+    template<typename Number>
+    inline Number sdev(const Number &x) {
+        return 0;
+    }
+    
+    template<typename Real>
     std::function<UReal<Real>(const UReal<Real> &)>
     uunary(const std::function<Real(Real)> &f,
            const std::function<Real(Real)> &df) {
@@ -306,16 +266,18 @@ namespace uncertainties {
         };
     }
     
-    template<typename Real>
-    constexpr Real default_step() {
-        return (1 << (std::numeric_limits<Real>::digits / 2))
-               * std::numeric_limits<Real>::epsilon();
-    };
+    namespace internal {
+        template<typename Real>
+        constexpr Real default_step() {
+            return (1 << (std::numeric_limits<Real>::digits / 2))
+                   * std::numeric_limits<Real>::epsilon();
+        };
+    }
     
     template<typename Real>
     std::function<UReal<Real>(const UReal<Real> &)>
     uunary(const std::function<Real(Real)> &f,
-           const Real &step=default_step<Real>()) {
+           const Real &step=internal::default_step<Real>()) {
         return [f, step](const UReal<Real> &x) {
             const Real &mu = x.n();
             const Real fmu = f(mu);

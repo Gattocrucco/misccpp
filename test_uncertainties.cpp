@@ -92,4 +92,5 @@ int main() {
     std::cout << udouble(0.25, 0.003).format(2) << "\n";
     std::cout << udouble(0.25, 0.0003).format(2) << "\n";
     std::cout << udouble(-1, 1) << "\n";
+    std::cout << unc::format(2345678901) << "\n";
 }
