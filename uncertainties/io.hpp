@@ -11,6 +11,8 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "core.hpp"
+
 namespace uncertainties {
     template<typename Real>
     class UReal;
@@ -49,15 +51,9 @@ namespace uncertainties {
     }
     
     template<typename Number>
-    inline const Number &nom(const Number &x) noexcept;
-    
-    template<typename Number>
-    inline Number sdev(const Number &x);
-
-    template<typename Number>
     std::string format(const Number &x,
-                       const float errdig=1.5f,
-                       const std::string &sep=" ± ") {
+                       const float errdig,
+                       const std::string &sep) {
         if (errdig <= 1.0f) {
             throw std::invalid_argument("uncertainties::format: errdig <= 1.0");
         }

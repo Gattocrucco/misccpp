@@ -8,7 +8,7 @@
 #include <string>
 #include <cstdlib>
 
-#include "ureal.hpp"
+#include "core.hpp"
 
 namespace uncertainties {
     namespace internal {

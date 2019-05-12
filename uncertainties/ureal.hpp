@@ -13,6 +13,8 @@
 #include <cmath>
 #include <utility>
 
+#include "core.hpp"
+
 /*!
 \brief C++ header library for linear uncertainty propagation.
 
@@ -31,15 +33,6 @@ int main() {
 ~~~
 */
 namespace uncertainties {
-    namespace internal {
-        using Id = int;
-    
-        extern Id next_id;
-    }
-    
-    template<typename Number>
-    std::string format(const Number &, const float, const std::string &);
-    
     /*!
     \brief Represents a number with associated uncertainty.
     */
@@ -247,16 +240,6 @@ namespace uncertainties {
     template<typename Real>
     inline Real sdev(const UReal<Real> &x) {
         return x.s();
-    }
-    
-    template<typename Number>
-    inline const Number &nom(const Number &x) noexcept {
-        return x;
-    }
-    
-    template<typename Number>
-    inline Number sdev(const Number &x) {
-        return 0;
     }
     
     template<typename Real>

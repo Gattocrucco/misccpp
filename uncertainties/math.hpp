@@ -7,10 +7,9 @@
 
 #include <cmath>
 
-namespace uncertainties {
-    template<typename Real>
-    class UReal;
+#include "core.hpp"
 
+namespace uncertainties {
     template<typename Real>
     UReal<Real> abs(const UReal<Real> &x) {
         return unary(x, std::abs(x.n()), x.n() >= 0 ? 1 : -1);

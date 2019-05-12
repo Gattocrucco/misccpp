@@ -7,15 +7,9 @@
 
 #include <iterator>
 
-namespace uncertainties {
-    template<typename Real>
-    class UReal;
+#include "core.hpp"
 
-    enum class Order {
-        row_major,
-        col_major
-    };
-    
+namespace uncertainties {
     namespace internal {
         template<typename InputIt, typename OutputIt, typename Operation>
         OutputIt outer(InputIt begin, InputIt end, OutputIt matrix,
