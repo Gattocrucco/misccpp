@@ -10,18 +10,24 @@
 #include "ureal.hpp"
 
 namespace uncertainties {
-    Id next_id {};
+    namespace internal {
+        Id next_id {};
 
-    void _insert_dot(std::string *s, int n, int e) {
-        e += s->size() - n;
-        n = s->size();
-        if (e >= n - 1) {
-            // no dot at end of mantissa
-        } else if (e >= 0) {
-            s->insert(1 + e, 1, '.');
-        } else if (e <= -1) {
-            s->insert(0, -e, '0');
-            s->insert(1, 1, '.');
+        void insert_dot(std::string *s, int n, int e) {
+            e += s->size() - n;
+            n = s->size();
+            if (e >= n - 1) {
+                // no dot at end of mantissa
+            } else if (e >= 0) {
+                s->insert(1 + e, 1, '.');
+            } else if (e <= -1) {
+                s->insert(0, -e, '0');
+                s->insert(1, 1, '.');
+            }
+        }
+        
+        std::string format_exp(const int e) {
+            return (e > 0 ? "+" : "-") + std::to_string(e);
         }
     }
 }

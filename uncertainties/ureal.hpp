@@ -30,39 +30,42 @@ int main() {
 ~~~
 */
 namespace uncertainties {
-    using Id = int;
+    namespace internal {
+        using Id = int;
     
-    extern Id _next_id;
+        extern Id next_id;
     
-    template<typename Real>
-    int _ndigits(const Real &x, const float n) {
-        const float log10x = static_cast<float>(std::log10(std::abs(x)));
-        const int n_int = static_cast<int>(std::floor(n));
-        const float n_frac = n - n_int;
-        const float log10x_frac = log10x - std::floor(log10x);
-        return n_int + (log10x_frac < n_frac ? 1 : 0);
-    }
-    
-    template<typename Real>
-    int _exponent(const Real &x) {
-        return static_cast<int>(std::floor(std::log10(std::abs(x))));
-    }
-    
-    template<typename Real>
-    std::string _mantissa(const Real &x, const int n, int *const e) {
-        const long long m = static_cast<long long>(
-            std::round(x * std::pow(Real(10), n - 1 - *e))
-        );
-        std::string s = std::to_string(std::abs(m));
-        assert(s.size() == n or s.size() == n + 1 or (m == 0 and n < 0));
-        if (n >= 1 and s.size() == n + 1) {
-            *e += 1;
-            s.pop_back();
+        template<typename Real>
+        int ndigits(const Real &x, const float n) {
+            const float log10x = static_cast<float>(std::log10(std::abs(x)));
+            const int n_int = static_cast<int>(std::floor(n));
+            const float n_frac = n - n_int;
+            const float log10x_frac = log10x - std::floor(log10x);
+            return n_int + (log10x_frac < n_frac ? 1 : 0);
         }
-        return s;
-    }
     
-    void _insert_dot(std::string *s, int n, int e);
+        template<typename Real>
+        int exponent(const Real &x) {
+            return static_cast<int>(std::floor(std::log10(std::abs(x))));
+        }
+    
+        template<typename Real>
+        std::string mantissa(const Real &x, const int n, int *const e) {
+            const long long m = static_cast<long long>(
+                std::round(x * std::pow(Real(10), n - 1 - *e))
+            );
+            std::string s = std::to_string(std::abs(m));
+            assert(s.size() == n or s.size() == n + 1 or (m == 0 and n < 0));
+            if (n >= 1 and s.size() == n + 1) {
+                *e += 1;
+                s.pop_back();
+            }
+            return s;
+        }
+    
+        void insert_dot(std::string *s, int n, int e);
+        std::string format_exp(const int e);
+    }
     
     /*!
     \brief Represents a number with associated uncertainty.
@@ -73,7 +76,7 @@ namespace uncertainties {
         using Type = UReal<Real>;
         
         Real mu;
-        std::map<Id, Real> sigma;
+        std::map<internal::Id, Real> sigma;
         
         UReal() {
             ;
@@ -92,11 +95,11 @@ namespace uncertainties {
         using real_type = Real;
         
         UReal(const Real n, const Real s):
-        mu {std::move(n)}, sigma {{_next_id, std::move(s)}} {
+        mu {std::move(n)}, sigma {{internal::next_id, std::move(s)}} {
             if (s < 0) {
                 throw std::invalid_argument("uncertainties::UReal::UReal: s < 0");
             }
-            ++_next_id;
+            ++internal::next_id;
         }
         
         UReal(const Real &n): UReal(n, 0) {
@@ -120,12 +123,12 @@ namespace uncertainties {
             if (s == 0) {
                 return std::to_string(this->mu) + sep + "0";
             }
-            const int sndig = _ndigits(s, errdig);
-            int sexp = _exponent(s);
-            int muexp = this->mu != 0 ? _exponent(this->mu) : sexp - sndig - 1;
-            std::string smant = _mantissa(s, sndig, &sexp);
+            const int sndig = internal::ndigits(s, errdig);
+            int sexp = internal::exponent(s);
+            int muexp = this->mu != 0 ? internal::exponent(this->mu) : sexp - sndig - 1;
+            std::string smant = internal::mantissa(s, sndig, &sexp);
             const int mundig = sndig + muexp - sexp;
-            std::string mumant = _mantissa(this->mu, mundig, &muexp);
+            std::string mumant = internal::mantissa(this->mu, mundig, &muexp);
             const std::string musign = this->mu < 0 ? "-" : "";
             bool use_exp;
             int base_exp;
@@ -137,12 +140,12 @@ namespace uncertainties {
                 base_exp = sexp;
             }
             if (use_exp) {
-                _insert_dot(&mumant, mundig, muexp - base_exp);
-                _insert_dot(&smant, sndig, sexp - base_exp);
-                return "(" + musign + mumant + sep + smant + ")e" + std::to_string(base_exp);
+                internal::insert_dot(&mumant, mundig, muexp - base_exp);
+                internal::insert_dot(&smant, sndig, sexp - base_exp);
+                return "(" + musign + mumant + sep + smant + ")e" + internal::format_exp(base_exp);
             } else {
-                _insert_dot(&mumant, mundig, muexp);
-                _insert_dot(&smant, sndig, sexp);
+                internal::insert_dot(&mumant, mundig, muexp);
+                internal::insert_dot(&smant, sndig, sexp);
                 return musign + mumant + sep + smant;
             }
         }
