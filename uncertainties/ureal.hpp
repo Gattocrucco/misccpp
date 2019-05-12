@@ -68,7 +68,7 @@ namespace uncertainties {
             ++internal::next_id;
         }
         
-        UReal(const Real &n): UReal(n, 0) {
+        UReal(const Real &n): mu {std::move(n)} {
             ;
         }
         
@@ -230,6 +230,10 @@ namespace uncertainties {
             const Real mu = this->mu * inv_x;
             return binary_assign(x, mu, inv_x, -mu * inv_x);
         }
+        
+        // template<typename OutVector, typename InVectorA, typename InVectorB>
+        // friend OutVector
+        // ureals(const InVectorA &, const InVectorB &, const Order);
     };
     
     template<typename Real>
