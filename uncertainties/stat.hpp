@@ -5,6 +5,8 @@
 \brief Defines functions to manipulate covariance matrices.
 */
 
+#include <iterator>
+
 namespace uncertainties {
     template<typename Real>
     class UReal;
@@ -55,7 +57,7 @@ namespace uncertainties {
     
     template<typename InputIt, typename OutputIt>
     OutputIt corr_matrix(InputIt begin, InputIt end, OutputIt matrix,
-                        Order order=Order::row_major) {
+                         Order order=Order::row_major) {
         using Type = typename InputIt::value_type;
         return internal::outer(begin, end, matrix, [](const Type &x, const Type &y) {
             return corr(x, y);
