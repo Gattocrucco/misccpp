@@ -11,6 +11,7 @@
 #include <limits>
 #include <stdexcept>
 #include <cmath>
+#include <utility>
 
 /*!
 \brief C++ header library for linear uncertainty propagation.
@@ -19,6 +20,7 @@ Basic example:
 ~~~{.cpp}
 #include <iostream>
 #include <uncertainties/ureal.hpp>
+#include <uncertainties/io.hpp>
 namespace unc = uncertainties;
 int main() {
     unc::udouble x(2, 1), y(2, 1);
@@ -90,8 +92,8 @@ namespace uncertainties {
         }
         
         template<typename... Args>
-        std::string format(Args... args) const {
-            return uncertainties::format(*this, args...);
+        std::string format(Args &&... args) const {
+            return uncertainties::format(*this, std::forward<Args>(args)...);
         }
         
         friend Type copy_unc(const Real n, const Type &x) {
