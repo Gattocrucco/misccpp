@@ -44,10 +44,6 @@ namespace uncertainties {
         Real mu;
         std::map<internal::Id, Real> sigma;
         
-        UReal() {
-            ;
-        }
-        
         Real s2() const {
             Real s2(0);
             for (const auto &it : this->sigma) {
@@ -68,7 +64,11 @@ namespace uncertainties {
             ++internal::next_id;
         }
         
-        UReal(const Real &n): mu {std::move(n)} {
+        UReal(const Real n): mu {std::move(n)} {
+            ;
+        }
+        
+        UReal() {
             ;
         }
         
