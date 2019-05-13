@@ -28,5 +28,3 @@ Use `make` to compile and run all the tests.
 * `NDIndex.hpp`: something like Numpy's `ndindex`, iterates over all combinations of indices.
 
 * `tuple_iterator.hpp`: given an iterator of e.g. `std::tuple`, iterates over a fixed component of the tuples.
-
-* `uncertainties/ureal.hpp`, etc.: first-order uncertainty propagation, more or less a port of the python package [uncertainties](https://github.com/lebigot/uncertainties) (see also [gvar](https://github.com/gplepage/gvar)).
