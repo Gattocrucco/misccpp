@@ -23,12 +23,13 @@ Basic example:
 #include <iostream>
 #include <uncertainties/ureal.hpp>
 #include <uncertainties/io.hpp>
+#include <uncertainties/impl.hpp>
 namespace unc = uncertainties;
 int main() {
     unc::udouble x(2, 1), y(2, 1);
-    unc::udouble y = x - x;
-    unc::udouble z = x - y;
-    std::cout << y.format(2) << ", " << z.format(2) << "\n";
+    unc::udouble a = x - x;
+    unc::udouble b = x - y;
+    std::cout << a.format() << ", " << b.format() << "\n";
 }
 ~~~
 */
@@ -266,10 +267,12 @@ namespace uncertainties {
     template<typename Real>
     std::function<UReal<Real>(const UReal<Real> &)>
     uunary(const std::function<Real(Real)> &f,
-           const Real &step=internal::default_step<Real>()) {
-        return [f, step](const UReal<Real> &x) {
+           const Real &astep=internal::default_step<Real>(),
+           const Real &rstep=internal::default_step<Real>()) {
+        return [f, rstep, astep](const UReal<Real> &x) {
             const Real &mu = x.n();
             const Real fmu = f(mu);
+            const Real step = std::abs(fmu) * rstep + astep;
             const Real dx = (f(mu + step) - fmu) / step;
             return unary(x, fmu, dx);
         };
